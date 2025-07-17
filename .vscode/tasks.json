@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run F1 Chart",
+			"command": "uv venv && uv pip install -r <(uv pip compile pyproject.toml --generate-hashes --no-emit-index-url) && uv pip install matplotlib pandas requests && uv pip sync && uv pip check && uv pip list && uv pip freeze && uv pip install . && uv pip check && uv pip list && uv pip freeze && uv pip run python main.py",
+			"group": "build"
+		}
+	]
+}
