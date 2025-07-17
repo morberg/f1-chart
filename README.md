@@ -1,5 +1,7 @@
 # F1 Standings Chart Generator
 
+Vibe coded with GitHub Copilot and GPT-4.1. This is the only line I've written myself in the repo, the rest has been generated.
+
 This Python program fetches Formula 1 race data from [openf1.org](https://openf1.org), generates a chart of driver standings after each race for a given season, and displays driver names with country flags. The chart is interactive, visually appealing, and exportable as a standalone HTML file for easy sharing.
 
 ## Features
