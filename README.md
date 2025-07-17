@@ -1,6 +1,7 @@
 # F1 Standings Chart Generator
 
 ## About (manual edit)
+
 Vibe coded with GitHub Copilot and GPT-4.1. This is the only section I've
 written myself in the repo, the rest has been generated.
 
