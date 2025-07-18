@@ -144,20 +144,33 @@ class TestMain(unittest.TestCase):
     @patch("main.pd.DataFrame")
     def test_plot_standings(self, mock_df):
         # Test that plot_standings calls DataFrame and write_html
-        mock_df.return_value.ffill.return_value.fillna.return_value = mock_df.return_value
+        mock_df.return_value.ffill.return_value.fillna.return_value = (
+            mock_df.return_value
+        )
         mock_df.return_value.melt.return_value = mock_df.return_value
         mock_fig = MagicMock()
         with patch("main.px.line", return_value=mock_fig):
             main.plot_standings([{"A": 1}], ["Race1"], ["A"])
             mock_fig.write_html.assert_called_once()
 
-    @patch("main.argparse.ArgumentParser.parse_args", return_value=type('Args', (), {'year': 2025, 'force_update': False})())
+    @patch(
+        "main.argparse.ArgumentParser.parse_args",
+        return_value=type("Args", (), {"year": 2025, "force_update": False})(),
+    )
     def test_main_flow(self, mock_args):
         # Patch all network and plotting calls
-        with patch("main.get_races", return_value=[{"session_key": 1, "meeting_name": "Test GP"}]), \
-             patch("main.get_race_results", return_value=[{"driver_number": 44, "position": 1}]), \
-             patch("main.get_driver_map", return_value={("44", "1"): "Lewis Hamilton"}), \
-             patch("main.plot_standings") as mock_plot:
+        with (
+            patch(
+                "main.get_races",
+                return_value=[{"session_key": 1, "meeting_name": "Test GP"}],
+            ),
+            patch(
+                "main.get_race_results",
+                return_value=[{"driver_number": 44, "position": 1}],
+            ),
+            patch("main.get_driver_map", return_value={("44", "1"): "Lewis Hamilton"}),
+            patch("main.plot_standings") as mock_plot,
+        ):
             main.main()
             mock_plot.assert_called_once()
 
