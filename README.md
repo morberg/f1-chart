@@ -68,6 +68,47 @@ Open `f1_standings.html` in your browser.
 
 - The code is in `main.py` and is easy to modify for further customization (e.g., cache expiry, more chart options).
 
+## Development & Automation
+
+This project includes a `Makefile` for common tasks:
+
+- **Run all tests:**
+  ```sh
+  make test
+  ```
+- **Check code coverage:**
+  ```sh
+  make coverage
+  ```
+- **Generate the chart for the current year:**
+  ```sh
+  make chart
+  ```
+- **Generate the chart for a specific year:**
+  ```sh
+  make chart-year YEAR=2025
+  ```
+- **Force update season cache and generate chart:**
+  ```sh
+  make chart-update YEAR=2025
+  ```
+
+## .gitignore
+
+The repository includes a `.gitignore` that excludes Python cache files, build artifacts, the `.cache` directory, coverage files, and virtual environments:
+
+```
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.cache/
+.coverage
+.venv
+```
+
 ## License
 
 MIT
