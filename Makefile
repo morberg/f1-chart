@@ -22,3 +22,9 @@ chart-year:
 # Force update season cache and generate chart (usage: make chart-update YEAR=2025)
 chart-update:
 	uv run python main.py --year $(YEAR) --force-update
+
+pytest-coverage:
+	pytest --cov=main --cov-report=term-missing test_main_pytest.py
+
+pytest:
+	pytest test_main_pytest.py
