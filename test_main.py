@@ -74,16 +74,16 @@ class TestMain(unittest.TestCase):
             {"session_key": 2, "meeting_name": "Test GP2"},
         ]
         driver_map = {"44": "Lewis Hamilton", "33": "Max Verstappen"}
-        # Patch get_race_results to return fixed results
+        # Patch get_race_results to return fixed results with 'points' field
         with patch("main.get_race_results") as mock_results:
             mock_results.side_effect = [
                 [
-                    {"driver_number": 44, "position": 1},
-                    {"driver_number": 33, "position": 2},
+                    {"driver_number": 44, "position": 1, "points": 25},
+                    {"driver_number": 33, "position": 2, "points": 18},
                 ],
                 [
-                    {"driver_number": 33, "position": 1},
-                    {"driver_number": 44, "position": 2},
+                    {"driver_number": 33, "position": 1, "points": 25},
+                    {"driver_number": 44, "position": 2, "points": 18},
                 ],
             ]
             standings, race_names, driver_names = main.calculate_standings(

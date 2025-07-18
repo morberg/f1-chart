@@ -146,7 +146,6 @@ def season_to_chart(cli_year=None):
 
 
 def calculate_standings(races, driver_map):
-    points_table = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
     driver_points = {}
     standings_progression = []
     for race in races:
@@ -158,14 +157,12 @@ def calculate_standings(races, driver_map):
             results,
             key=lambda x: x["position"] if isinstance(x.get("position"), int) else 9999,
         )
-        for i, result in enumerate(results):
-            if i < len(points_table):
-                points = points_table[i]
-            else:
-                points = 0
+        for result in results:
             driver_num = result.get("driver_number", "Unknown")
             name = driver_map.get(str(driver_num), str(driver_num))  # Use map
             driver_points.setdefault(name, 0)
+            # Use API-provided points if available, else fallback to 0
+            points = result.get("points", 0)
             driver_points[name] += points
         # Save a snapshot after this race
         standings_progression.append(driver_points.copy())
