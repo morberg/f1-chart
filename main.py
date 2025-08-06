@@ -37,7 +37,7 @@ def get_races(year, force_update=False, update_cache=False, max_retries=3):
     cache_file = SEASON_CACHE_PATTERN.format(year=year)
     sessions = None
     existing_sessions = None
-    
+
     if force_update:
         # Force update: ignore existing cache completely
         sessions = None
@@ -45,11 +45,13 @@ def get_races(year, force_update=False, update_cache=False, max_retries=3):
         # Update cache: load existing cache and merge with new data
         existing_sessions = load_cache(cache_file)
         if existing_sessions:
-            print(f"Found {len(existing_sessions)} races in cache, checking for new races...")
+            print(
+                f"Found {len(existing_sessions)} races in cache, checking for new races..."
+            )
     else:
         # Normal mode: use cache if available
         sessions = load_cache(cache_file)
-    
+
     if sessions is None or update_cache:
         url = f"{OPENF1_API_BASE}/sessions?year={year}&session_name=Race"
         for attempt in range(max_retries):
@@ -57,11 +59,15 @@ def get_races(year, force_update=False, update_cache=False, max_retries=3):
                 resp = requests.get(url, timeout=30)
                 resp.raise_for_status()
                 new_sessions = resp.json()
-                
+
                 if update_cache and existing_sessions:
                     # Merge new sessions with existing ones
                     existing_keys = {s.get("session_key") for s in existing_sessions}
-                    new_races = [s for s in new_sessions if s.get("session_key") not in existing_keys]
+                    new_races = [
+                        s
+                        for s in new_sessions
+                        if s.get("session_key") not in existing_keys
+                    ]
                     if new_races:
                         print(f"Found {len(new_races)} new races to add to cache")
                         sessions = existing_sessions + new_races
@@ -70,7 +76,7 @@ def get_races(year, force_update=False, update_cache=False, max_retries=3):
                         sessions = existing_sessions
                 else:
                     sessions = new_sessions
-                
+
                 save_cache(cache_file, sessions)
                 break
             except (
@@ -314,12 +320,16 @@ def main():
         "--force-update", action="store_true", help="Force update season cache from API"
     )
     parser.add_argument(
-        "--update-cache", action="store_true", help="Add new races to cache without replacing existing ones"
+        "--update-cache",
+        action="store_true",
+        help="Add new races to cache without replacing existing ones",
     )
     args = parser.parse_args()
     year = season_to_chart(args.year)
     print(f"Fetching F1 {year} season data...")
-    races = get_races(year, force_update=args.force_update, update_cache=args.update_cache)
+    races = get_races(
+        year, force_update=args.force_update, update_cache=args.update_cache
+    )
     if not races:
         print("No races found for this season.")
         return

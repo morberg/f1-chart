@@ -48,21 +48,31 @@ uv sync
 uv run main.py --year 2025
 ```
 - Replace `2025` with any season year you want to chart.
+- If you omit `--year`, it defaults to the current year (2025).
 
-### 3. Force update season cache (fetch latest sessions)
+### 3. Force update all cached data (complete refresh)
 
 ```sh
 uv run main.py --year 2025 --force-update
 ```
 
-### 4. View the chart
+### 4. Add new races to cache (incremental update)
+
+```sh
+uv run main.py --year 2025 --update-cache
+```
+- This adds new races to the existing cache without replacing cached data
+- More efficient for ongoing seasons where you want to add new races as they become available
+
+### 5. View the chart
 
 Open `f1_standings.html` in your browser.
 
 ## Caching
 
 - All API data is cached in the `.cache` directory for efficiency and offline use.
-- Use `--force-update` to refresh the season cache if new sessions are added.
+- Use `--force-update` to refresh the season cache completely (replaces all cached data).
+- Use `--update-cache` to add new races to existing cache without replacing cached data (more efficient for ongoing seasons).
 
 ## Customization
 
@@ -91,6 +101,18 @@ This project includes a `Makefile` for common tasks:
 - **Force update season cache and generate chart:**
   ```sh
   make chart-update YEAR=2025
+  ```
+- **Add new races to cache and generate chart (incremental):**
+  ```sh
+  make chart-add-races YEAR=2025
+  ```
+- **Run pytest tests:**
+  ```sh
+  make pytest
+  ```
+- **Run pytest with coverage:**
+  ```sh
+  make pytest-coverage
   ```
 
 ## .gitignore
