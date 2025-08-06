@@ -1,6 +1,6 @@
 # Makefile for f1-chart project
 
-.PHONY: test coverage chart
+.PHONY: test coverage chart pytest pytest-coverage
 
 # Run all unit tests
 
@@ -19,9 +19,13 @@ chart:
 chart-year:
 	uv run python main.py --year $(YEAR)
 
-# Force update season cache and generate chart (usage: make chart-update YEAR=2025)
+# Force update season cache and generate chart (usage: make chart-update YEAR=2025, or just make chart-update for current year)
 chart-update:
-	uv run python main.py --year $(YEAR) --force-update
+	uv run python main.py --year $(or $(YEAR),$(shell date +%Y)) --force-update
+
+# Add new races to cache without replacing existing ones (usage: make chart-add-races YEAR=2025, or just make chart-add-races for current year)
+chart-add-races:
+	uv run python main.py --year $(or $(YEAR),$(shell date +%Y)) --update-cache
 
 pytest-coverage:
 	pytest --cov=main --cov-report=term-missing test_main_pytest.py

@@ -10,7 +10,7 @@ in this repo is an example of what the year 2023 looks like.
 
 Five minutes after checking in this code I found out about [Formula 1
 points](https://www.formula1points.com/) which does all of this and much more in
-a more appealing way. Oh well. I had fun doing this at least. 
+a more appealing way. Oh well. I had fun doing this at least.
 
 ## About
 

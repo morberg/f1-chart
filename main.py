@@ -33,17 +33,63 @@ def save_cache(filename, data):
         json.dump(data, f)
 
 
-def get_races(year, force_update=False):
+def get_races(year, force_update=False, update_cache=False, max_retries=3):
     cache_file = SEASON_CACHE_PATTERN.format(year=year)
     sessions = None
-    if not force_update:
+    existing_sessions = None
+    
+    if force_update:
+        # Force update: ignore existing cache completely
+        sessions = None
+    elif update_cache:
+        # Update cache: load existing cache and merge with new data
+        existing_sessions = load_cache(cache_file)
+        if existing_sessions:
+            print(f"Found {len(existing_sessions)} races in cache, checking for new races...")
+    else:
+        # Normal mode: use cache if available
         sessions = load_cache(cache_file)
-    if sessions is None:
+    
+    if sessions is None or update_cache:
         url = f"{OPENF1_API_BASE}/sessions?year={year}&session_name=Race"
-        resp = requests.get(url)
-        resp.raise_for_status()
-        sessions = resp.json()
-        save_cache(cache_file, sessions)
+        for attempt in range(max_retries):
+            try:
+                resp = requests.get(url, timeout=30)
+                resp.raise_for_status()
+                new_sessions = resp.json()
+                
+                if update_cache and existing_sessions:
+                    # Merge new sessions with existing ones
+                    existing_keys = {s.get("session_key") for s in existing_sessions}
+                    new_races = [s for s in new_sessions if s.get("session_key") not in existing_keys]
+                    if new_races:
+                        print(f"Found {len(new_races)} new races to add to cache")
+                        sessions = existing_sessions + new_races
+                    else:
+                        print("No new races found")
+                        sessions = existing_sessions
+                else:
+                    sessions = new_sessions
+                
+                save_cache(cache_file, sessions)
+                break
+            except (
+                requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError,
+            ) as e:
+                print(f"API request failed (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    wait_time = 2**attempt
+                    print(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Failed to fetch races after {max_retries} attempts")
+                    if update_cache and existing_sessions:
+                        print("Using existing cached data")
+                        sessions = existing_sessions
+                    else:
+                        raise
     filtered_sessions = [s for s in sessions if "date_start" in s]
     if len(filtered_sessions) != len(sessions):
         print(
@@ -53,17 +99,36 @@ def get_races(year, force_update=False):
     return sessions
 
 
-def get_race_results(session_key):
+def get_race_results(session_key, max_retries=3):
     cache_file = RACE_RESULT_CACHE_PATTERN.format(session_key=session_key)
     data = load_cache(cache_file)
     if data is not None:
         return data
     url = f"{OPENF1_API_BASE}/session_result?session_key={session_key}"
-    resp = requests.get(url)
-    resp.raise_for_status()
-    data = resp.json()
-    save_cache(cache_file, data)
-    return data
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            save_cache(cache_file, data)
+            return data
+        except (
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.HTTPError,
+        ) as e:
+            print(
+                f"API request failed for session {session_key} (attempt {attempt + 1}/{max_retries}): {e}"
+            )
+            if attempt < max_retries - 1:
+                wait_time = 2**attempt
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(
+                    f"Failed to fetch race results for session {session_key} after {max_retries} attempts"
+                )
+                return []  # Return empty list instead of raising exception
 
 
 def get_driver_map(driver_session_pairs, max_retries=5):
@@ -77,23 +142,50 @@ def get_driver_map(driver_session_pairs, max_retries=5):
         else:
             url = f"{OPENF1_API_BASE}/drivers?driver_number={driver_number}&session_key={session_key}"
             print(f"Getting driver {driver_number} in session {session_key}")
+            success = False
             for attempt in range(max_retries):
-                resp = requests.get(url)
-                if resp.status_code == 429:
-                    wait = 2**attempt
-                    print(f"- Rate limited (429). Waiting {wait}s before retrying...")
-                    time.sleep(wait)
-                    continue
-                resp.raise_for_status()
-                break
-            data = resp.json()
-            if data:
-                d = data[0]
-                name = (
-                    d.get("full_name") or d.get("broadcast_name") or str(driver_number)
-                )
+                try:
+                    resp = requests.get(url, timeout=30)
+                    if resp.status_code == 429:
+                        wait = 2**attempt
+                        print(
+                            f"- Rate limited (429). Waiting {wait}s before retrying..."
+                        )
+                        time.sleep(wait)
+                        continue
+                    resp.raise_for_status()
+                    success = True
+                    break
+                except (
+                    requests.exceptions.Timeout,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.HTTPError,
+                ) as e:
+                    print(f"- Request error (attempt {attempt + 1}/{max_retries}): {e}")
+                    if attempt < max_retries - 1:
+                        wait_time = 2**attempt
+                        print(f"- Retrying in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        print(
+                            f"- Failed after {max_retries} attempts, using driver number as fallback"
+                        )
+
+            if success:
+                data = resp.json()
+                if data:
+                    d = data[0]
+                    name = (
+                        d.get("full_name")
+                        or d.get("broadcast_name")
+                        or str(driver_number)
+                    )
+                else:
+                    name = str(driver_number)
             else:
+                # Fallback when all attempts failed
                 name = str(driver_number)
+
             cache[key] = name
             updated = True
         driver_map[(str(driver_number), str(session_key))] = name
@@ -221,10 +313,13 @@ def main():
     parser.add_argument(
         "--force-update", action="store_true", help="Force update season cache from API"
     )
+    parser.add_argument(
+        "--update-cache", action="store_true", help="Add new races to cache without replacing existing ones"
+    )
     args = parser.parse_args()
     year = season_to_chart(args.year)
     print(f"Fetching F1 {year} season data...")
-    races = get_races(year, force_update=args.force_update)
+    races = get_races(year, force_update=args.force_update, update_cache=args.update_cache)
     if not races:
         print("No races found for this season.")
         return
@@ -233,11 +328,20 @@ def main():
     all_race_results = []
     for race in races:
         results = get_race_results(race["session_key"])
-        all_race_results.append((race, results))
-        for result in results:
-            driver_num = result.get("driver_number")
-            if driver_num is not None:
-                driver_session_pairs.add((driver_num, race["session_key"]))
+        if results:  # Only include races with results
+            all_race_results.append((race, results))
+            for result in results:
+                driver_num = result.get("driver_number")
+                if driver_num is not None:
+                    driver_session_pairs.add((driver_num, race["session_key"]))
+        else:
+            print(
+                f"Skipping race {race.get('meeting_name', 'Unknown')} - no results available"
+            )
+
+    if not all_race_results:
+        print("No race results available for this season.")
+        return
     # Fetch driver map using the correct endpoint
     driver_map_full = get_driver_map(driver_session_pairs)
     # Build a mapping from driver_number to the most recent name (for charting)
